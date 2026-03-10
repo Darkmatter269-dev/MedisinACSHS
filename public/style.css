@@ -1,0 +1,65 @@
+body{
+    margin:0;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:white;
+    font-family:Arial;
+}
+
+.container{
+    display:flex;
+    align-items:center;
+    gap:20px;
+}
+
+/* LOGO */
+
+.logo{
+    width:300px;
+    transform:translateY(500px);
+}
+
+/* SLIDE UP */
+
+.slideUp{
+    animation:slideUp 1s forwards;
+}
+
+@keyframes slideUp{
+    to{
+        transform:translateY(0);
+    }
+}
+
+/* MOVE LEFT */
+
+.moveLeft{
+    animation:moveLeft 1s forwards;
+}
+
+@keyframes moveLeft{
+    from{
+        transform:translateY(0) translateX(0);
+    }
+    to{
+        transform:translateY(0) translateX(-200px);
+    }
+}
+
+/* TITLE */
+
+#title{
+    font-size:50px;
+    letter-spacing:2px;
+}
+
+/* PRESS START */
+
+#start{
+    color:red;
+    font-weight: bold;
+    opacity:0;
+    font-size: 30px;
+}
