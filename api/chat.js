@@ -12,22 +12,15 @@ module.exports = async function handler(req, res) {
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
+
     if (!apiKey) {
-        return res.status(500).json({ error: 'GEMINI_API_KEY is not set in environment variables' });
+        return res.status(500).json({ error: 'GEMINI_API_KEY not set' });
     }
 
-    // Parse body manually if Vercel hasn't done it already
-    let body = req.body;
-    if (typeof body === 'string') {
-        try { body = JSON.parse(body); } catch { return res.status(400).json({ error: 'Invalid JSON body' }); }
-    }
-    if (!body || typeof body !== 'object') {
-        return res.status(400).json({ error: 'Request body is empty or not JSON' });
-    }
+    const { contents, system_instruction } = req.body;
 
-    const { contents, system_instruction } = body;
     if (!Array.isArray(contents) || contents.length === 0) {
-        return res.status(400).json({ error: 'contents array is missing or empty' });
+        return res.status(400).json({ error: 'contents array missing' });
     }
 
     try {
@@ -36,13 +29,24 @@ module.exports = async function handler(req, res) {
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ system_instruction, contents })
+                body: JSON.stringify({ contents, system_instruction })
             }
         );
 
         const data = await geminiRes.json();
-        return res.status(geminiRes.status).json(data);
+
+        if (!data.candidates) {
+            return res.status(500).json({ error: "No response from Gemini", raw: data });
+        }
+
+        return res.status(200).json({
+            reply: data.candidates[0].content.parts[0].text
+        });
+
     } catch (err) {
-        return res.status(502).json({ error: 'Failed to reach Gemini API', detail: err.message });
+        return res.status(502).json({
+            error: 'Failed to reach Gemini API',
+            detail: err.message
+        });
     }
 };
