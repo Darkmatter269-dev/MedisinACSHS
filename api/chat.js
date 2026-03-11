@@ -43,10 +43,12 @@ module.exports = async function handler(req, res) {
         }
 
         // Safety block or empty response
-        if (!data.candidates || data.candidates.length === 0) {
-            const reason = data.promptFeedback?.blockReason || 'Unknown reason';
-            return res.status(500).json({ error: `Gemini blocked the response: ${reason}` });
-        }
+        if (!data.candidates) {
+    return res.status(500).json({
+        error: "Gemini returned no candidates",
+        geminiResponse: data
+    });
+}
 
         return res.status(200).json({
             reply: data.candidates[0].content.parts[0].text
