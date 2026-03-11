@@ -11,52 +11,74 @@ module.exports = async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.DEEPSEEK_API_KEY;
 
     if (!apiKey) {
-        return res.status(500).json({ error: 'GEMINI_API_KEY not set' });
+        return res.status(500).json({ error: 'DEEPSEEK_API_KEY not set' });
     }
 
-    const { contents, system_instruction } = req.body;
+    const body = req.body || {};
+    const { contents, system_instruction } = body;
 
     if (!Array.isArray(contents) || contents.length === 0) {
         return res.status(400).json({ error: 'contents array missing' });
     }
 
     try {
-        const geminiRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents, system_instruction })
+        const messages = [];
+        const systemText = system_instruction?.parts?.[0]?.text;
+
+        if (typeof systemText === 'string' && systemText.trim()) {
+            messages.push({ role: 'system', content: systemText.trim() });
+        }
+
+        for (const item of contents) {
+            const role = item?.role === 'model' ? 'assistant' : 'user';
+            const contentText = (item?.parts || [])
+                .map((part) => part?.text || '')
+                .join('\n')
+                .trim();
+
+            if (contentText) {
+                messages.push({ role, content: contentText });
             }
-        );
+        }
 
-        const data = await geminiRes.json();
+        if (messages.length === 0) {
+            return res.status(400).json({ error: 'No valid messages to send' });
+        }
 
-        // Gemini returned an API-level error (e.g. invalid key, quota exceeded)
-        if (data.error) {
-            return res.status(geminiRes.status).json({
-                error: data.error.message || JSON.stringify(data.error)
+        const deepseekRes = await fetch('https://api.deepseek.com/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: 'deepseek-chat',
+                messages,
+                temperature: 0.5
+            })
+        });
+
+        const data = await deepseekRes.json();
+
+        if (!deepseekRes.ok) {
+            return res.status(deepseekRes.status).json({
+                error: data?.error?.message || data?.message || 'DeepSeek API error'
             });
         }
 
-        // Safety block or empty response
-        if (!data.candidates) {
-    return res.status(500).json({
-        error: "Gemini returned no candidates",
-        geminiResponse: data
-    });
-}
+        const reply = data?.choices?.[0]?.message?.content;
+        if (!reply) {
+            return res.status(500).json({ error: 'DeepSeek returned no reply', raw: data });
+        }
 
-        return res.status(200).json({
-            reply: data.candidates[0].content.parts[0].text
-        });
+        return res.status(200).json({ reply });
 
     } catch (err) {
         return res.status(502).json({
-            error: 'Failed to reach Gemini API',
+            error: 'Failed to reach DeepSeek API',
             detail: err.message
         });
     }
