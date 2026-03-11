@@ -1,5 +1,4 @@
 module.exports = async function handler(req, res) {
-    // Allow cross-origin requests from the same Vercel deployment
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -14,14 +13,21 @@ module.exports = async function handler(req, res) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-        return res.status(500).json({ error: 'API key not configured on server' });
+        return res.status(500).json({ error: 'GEMINI_API_KEY is not set in environment variables' });
     }
 
-    const body = req.body || {};
-    const { contents, system_instruction } = body;
+    // Parse body manually if Vercel hasn't done it already
+    let body = req.body;
+    if (typeof body === 'string') {
+        try { body = JSON.parse(body); } catch { return res.status(400).json({ error: 'Invalid JSON body' }); }
+    }
+    if (!body || typeof body !== 'object') {
+        return res.status(400).json({ error: 'Request body is empty or not JSON' });
+    }
 
+    const { contents, system_instruction } = body;
     if (!Array.isArray(contents) || contents.length === 0) {
-        return res.status(400).json({ error: 'Invalid request body: contents missing' });
+        return res.status(400).json({ error: 'contents array is missing or empty' });
     }
 
     try {

@@ -168,9 +168,13 @@ async function sendToGemini(userText) {
     });
 
 
-    if (!response.ok) throw new Error(`API error ${response.status}`);
-
     const data = await response.json();
+
+    if (!response.ok) {
+        const detail = data?.error || data?.detail || `Server error ${response.status}`;
+        throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    }
+
     const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text
         || 'Sorry, I could not generate a response. Please try again.';
 
@@ -196,7 +200,7 @@ async function handleSend(text) {
         addAssistantMessage(reply);
     } catch (err) {
         hideTyping();
-        addAssistantMessage('Sorry, I encountered an error. Please check your connection and try again.');
+        addAssistantMessage(`Sorry, something went wrong: ${err.message}`);
         console.error(err);
     } finally {
         chatInput.disabled = false;
