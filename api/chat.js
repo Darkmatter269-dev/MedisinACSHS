@@ -35,8 +35,17 @@ module.exports = async function handler(req, res) {
 
         const data = await geminiRes.json();
 
-        if (!data.candidates) {
-            return res.status(500).json({ error: "No response from Gemini", raw: data });
+        // Gemini returned an API-level error (e.g. invalid key, quota exceeded)
+        if (data.error) {
+            return res.status(geminiRes.status).json({
+                error: data.error.message || JSON.stringify(data.error)
+            });
+        }
+
+        // Safety block or empty response
+        if (!data.candidates || data.candidates.length === 0) {
+            const reason = data.promptFeedback?.blockReason || 'Unknown reason';
+            return res.status(500).json({ error: `Gemini blocked the response: ${reason}` });
         }
 
         return res.status(200).json({
