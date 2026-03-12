@@ -69,13 +69,6 @@
             </article>
         </section>
 
-        <section class="quick-actions" aria-label="Quick prompts">
-            <button type="button">Find a Specialist</button>
-            <button type="button">Medication Info</button>
-            <button type="button">Appointment Help</button>
-            <button type="button">Symptom Checker</button>
-        </section>
-
         <form class="chat-input" aria-label="Send a message">
             <button class="plus-btn" type="button" aria-label="Open extra options">+</button>
             <label class="sr-only" for="assistant-message">Type your message</label>
@@ -88,23 +81,10 @@
 </main>
 
 <script>
-// ── API endpoint (proxied through Vercel serverless function) ─────────────────
-// The real Gemini API key is stored in Vercel's environment variables — never here.
-const GEMINI_URL = '/api/chat';
-
-const SYSTEM_CONTEXT =
-    `You are MedisinACSHS, a helpful AI medical assistant for the ACSHS health center in the Philippines. 
-You assist with medical information, first-aid guidance, medication questions, appointment advice, symptom checking, and emotional support. 
-Keep responses clear, concise, and compassionate. Always recommend consulting a real healthcare professional for serious concerns.`;
-
 // ── DOM refs ─────────────────────────────────────────────────────
 const chatForm   = document.querySelector('.chat-input');
 const chatInput  = document.getElementById('assistant-message');
 const chatShell  = document.querySelector('.chat-shell');
-const quickBtns  = document.querySelectorAll('.quick-actions button');
-
-// Keeps the full conversation so Gemini has context
-const conversationHistory = [];
 
 // ── Helpers ──────────────────────────────────────────────────────
 function getTime() {
@@ -118,25 +98,6 @@ function addUserMessage(text) {
     article.querySelector('p').textContent = text;
     chatShell.appendChild(article);
     chatShell.scrollTop = chatShell.scrollHeight;
-}
-
-function showTyping() {
-    const article = document.createElement('article');
-    article.className = 'message message-assistant';
-    article.id = 'typing-indicator';
-    article.innerHTML = `
-        <div class="message-head">
-            <span class="heart-icon" aria-hidden="true">&#9825;</span>
-            <strong>MedisinACSHS</strong>
-        </div>
-        <div class="typing-dots"><span></span><span></span><span></span></div>`;
-    chatShell.appendChild(article);
-    chatShell.scrollTop = chatShell.scrollHeight;
-}
-
-function hideTyping() {
-    const el = document.getElementById('typing-indicator');
-    if (el) el.remove();
 }
 
 function addAssistantMessage(text) {
@@ -154,36 +115,18 @@ function addAssistantMessage(text) {
     chatShell.scrollTop = chatShell.scrollHeight;
 }
 
-// ── Gemini API call ──────────────────────────────────────────────
-async function sendToGemini(userText) {
-    conversationHistory.push({ role: 'user', parts: [{ text: userText }] });
+function getSimpleReply(userText) {
+    const text = userText.trim().toLowerCase();
 
-    const response = await fetch(GEMINI_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            system_instruction: { parts: [{ text: SYSTEM_CONTEXT }] },
-            contents: conversationHistory
-        })
-    });
-
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        const detail = data?.error || data?.detail || `Server error ${response.status}`;
-        throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    if (/^(hello|hi|hey)\b/.test(text)) {
+        return 'Hello, how can I help you?';
     }
 
-    const replyText = data.reply
-        || 'Sorry, I could not generate a response. Please try again.';
-
-    conversationHistory.push({ role: 'model', parts: [{ text: replyText }] });
-    return replyText;
+    return 'Thank you for your message. How can I help you?';
 }
 
 // ── Send handler ─────────────────────────────────────────────────
-async function handleSend(text) {
+function handleSend(text) {
     const msg = text.trim();
     if (!msg) return;
 
@@ -192,31 +135,20 @@ async function handleSend(text) {
     document.querySelector('.send-btn').disabled = true;
 
     addUserMessage(msg);
-    showTyping();
 
-    try {
-        const reply = await sendToGemini(msg);
-        hideTyping();
+    setTimeout(() => {
+        const reply = getSimpleReply(msg);
         addAssistantMessage(reply);
-    } catch (err) {
-        hideTyping();
-        addAssistantMessage(`Sorry, something went wrong: ${err.message}`);
-        console.error(err);
-    } finally {
         chatInput.disabled = false;
         document.querySelector('.send-btn').disabled = false;
         chatInput.focus();
-    }
+    }, 250);
 }
 
 // ── Events ───────────────────────────────────────────────────────
 chatForm.addEventListener('submit', (event) => {
     event.preventDefault();
     handleSend(chatInput.value);
-});
-
-quickBtns.forEach(btn => {
-    btn.addEventListener('click', () => handleSend(btn.textContent.trim()));
 });
 </script>
 </body>
