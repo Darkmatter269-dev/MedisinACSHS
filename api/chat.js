@@ -57,7 +57,7 @@ module.exports = async function handler(req, res) {
                 'X-Title': 'MedisinACSHS Assistant'
             },
             body: JSON.stringify({
-                model: 'openrouter/hunter-alpha:free',
+                model: 'meta-llama/llama-3.3-70b-instruct:free',
                 messages,
                 temperature: 0.5
             })
