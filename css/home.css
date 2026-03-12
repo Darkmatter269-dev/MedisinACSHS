@@ -13,6 +13,27 @@ body {
     font-family: "Segoe UI", "Trebuchet MS", sans-serif;
 }
 
+.site-logo-link {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 1200;
+    display: inline-flex;
+    border-radius: 50%;
+}
+
+.site-logo-link:focus-visible {
+    outline: 3px solid #00103a;
+    outline-offset: 3px;
+}
+
+.site-logo {
+    width: clamp(54px, 6vw, 78px);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.22));
+}
+
 .home-screen {
     width: min(1300px, 96vw);
     min-height: 80vh;

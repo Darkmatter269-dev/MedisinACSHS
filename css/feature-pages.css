@@ -10,9 +10,30 @@ body {
     font-family: "Segoe UI", "Trebuchet MS", sans-serif;
 }
 
+.site-logo-link {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 1200;
+    display: inline-flex;
+    border-radius: 50%;
+}
+
+.site-logo-link:focus-visible {
+    outline: 3px solid #00103a;
+    outline-offset: 3px;
+}
+
+.site-logo {
+    width: clamp(54px, 6vw, 76px);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.2));
+}
+
 .page-shell {
     width: min(980px, 94vw);
-    margin: 40px auto;
+    margin: 92px auto 40px;
     background: #ffffff;
     border-radius: 20px;
     box-shadow: 0 16px 32px rgba(72, 33, 52, 0.12);
@@ -318,7 +339,7 @@ button {
 
 @media (max-width: 680px) {
     .page-shell {
-        margin: 18px auto;
+        margin: 76px auto 18px;
         padding: 20px;
     }
 
