@@ -125,6 +125,26 @@ function addAssistantMessage(text) {
     chatShell.scrollTop = chatShell.scrollHeight;
 }
 
+function showTyping() {
+    const article = document.createElement('article');
+    article.className = 'message message-assistant';
+    article.id = 'typing-indicator';
+    article.innerHTML = `
+        <div class="message-head">
+            <span class="heart-icon" aria-hidden="true">&#9825;</span>
+            <strong>MedisinACSHS</strong>
+        </div>
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+        <time>${getTime()}</time>`;
+    chatShell.appendChild(article);
+    chatShell.scrollTop = chatShell.scrollHeight;
+}
+
+function hideTyping() {
+    const typing = document.getElementById('typing-indicator');
+    if (typing) typing.remove();
+}
+
 async function sendToAssistant(userText) {
     conversationHistory.push({ role: 'user', parts: [{ text: userText }] });
 
@@ -159,11 +179,14 @@ async function handleSend(text) {
     sendBtn.disabled = true;
 
     addUserMessage(msg);
+    showTyping();
 
     try {
         const reply = await sendToAssistant(msg);
+        hideTyping();
         addAssistantMessage(reply);
     } catch (err) {
+        hideTyping();
         addAssistantMessage(`Sorry, something went wrong: ${err.message}`);
         console.error(err);
     } finally {
