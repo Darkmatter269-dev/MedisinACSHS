@@ -10,36 +10,40 @@
 <main class="page-shell">
     <div class="top-bar">
         <a class="back-link" href="home.html">&larr; Back to Home</a>
-        <span class="badge">Schedule</span>
+        <span class="badge">Plan &amp; Schedule</span>
     </div>
 
-    <h1>Plan and Schedule</h1>
-    <p class="lead">View and update your key tasks for the day. Select a row to review the details.</p>
+    <section class="card medalendar-card" aria-label="Appointment scheduler">
+        <h1 class="medalendar-title">MEDALENDAR.</h1>
+        <p class="medalendar-subtitle">Schedule your medical intake here.</p>
 
-    <section class="grid" aria-label="Daily schedule">
-        <a class="card schedule-row" href="#">
-            <span>
-                <h3>Morning Briefing</h3>
-                <p class="meta">Staff handoff and patient flow update.</p>
-            </span>
-            <span class="schedule-time">08:00 AM</span>
-        </a>
+        <form class="medalendar-form" action="#" method="post">
+            <label for="full-name">PATIENT'S FULL NAME</label>
+            <input id="full-name" name="full-name" type="text" placeholder="Juan dela Cruz" required>
 
-        <a class="card schedule-row" href="#">
-            <span>
-                <h3>Vaccination Session</h3>
-                <p class="meta">Outpatient immunization and documentation.</p>
-            </span>
-            <span class="schedule-time">10:30 AM</span>
-        </a>
+            <label for="drug-name">NAME OF DRUGS</label>
+            <select id="drug-name" name="drug-name" required>
+                <option value="" disabled selected>Pumili ng gamot...</option>
+                <option value="paracetamol">Paracetamol</option>
+                <option value="ibuprofen">Ibuprofen</option>
+                <option value="amoxicillin">Amoxicillin</option>
+                <option value="cetirizine">Cetirizine</option>
+                <option value="metformin">Metformin</option>
+            </select>
 
-        <a class="card schedule-row" href="#">
-            <span>
-                <h3>End-of-Day Review</h3>
-                <p class="meta">Inventory check and incident summary report.</p>
-            </span>
-            <span class="schedule-time">05:00 PM</span>
-        </a>
+            <div class="medalendar-time-grid">
+                <div>
+                    <label for="start-time">START TIME</label>
+                    <input id="start-time" name="start-time" type="datetime-local" required>
+                </div>
+                <div>
+                    <label for="end-time">END TIME</label>
+                    <input id="end-time" name="end-time" type="datetime-local" required>
+                </div>
+            </div>
+
+            <button type="submit" class="medalendar-submit">BOOK APPOINTMENT</button>
+        </form>
     </section>
 </main>
 </body>
