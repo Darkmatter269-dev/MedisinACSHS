@@ -129,12 +129,13 @@ body {
 }
 
 .medalendar-panel h2 {
+    margin-bottom: 84px;
     line-height: 1;
     letter-spacing: 1.2px;
 }
 
 .medalendar-panel .icon-button {
-    margin-top: 22px;
+    margin-top: 0;
 }
 
 @keyframes slideInUp {
@@ -162,5 +163,9 @@ body {
 
     .action-panel:not(:last-child)::after {
         display: none;
+    }
+
+    .medalendar-panel h2 {
+        margin-bottom: 28px;
     }
 }
