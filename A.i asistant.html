@@ -34,22 +34,10 @@
             </div>
 
             <div class="assistant-actions" aria-label="Conversation controls">
-                <button class="header-btn" type="button" title="Sound">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M11 5 6 9H3v6h3l5 4V5z"></path>
-                        <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
-                    </svg>
-                </button>
-                <button class="header-btn" type="button" title="Refresh">
+                <button class="header-btn" id="refresh-chat" type="button" title="Refresh conversation" aria-label="Refresh conversation">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
                         <path d="M21 4v6h-6"></path>
-                    </svg>
-                </button>
-                <button class="header-btn" type="button" title="Close">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M18 6 6 18"></path>
-                        <path d="m6 6 12 12"></path>
                     </svg>
                 </button>
             </div>
@@ -70,7 +58,6 @@
         </section>
 
         <form class="chat-input" aria-label="Send a message">
-            <button class="plus-btn" type="button" aria-label="Open extra options">+</button>
             <label class="sr-only" for="assistant-message">Type your message</label>
             <input id="assistant-message" type="text" placeholder="Type your message here...">
             <button class="send-btn" type="submit">Send</button>
@@ -93,6 +80,7 @@ const chatForm   = document.querySelector('.chat-input');
 const chatInput  = document.getElementById('assistant-message');
 const chatShell  = document.querySelector('.chat-shell');
 const sendBtn    = document.querySelector('.send-btn');
+const refreshBtn = document.getElementById('refresh-chat');
 
 const conversationHistory = [];
 
@@ -143,6 +131,20 @@ function showTyping() {
 function hideTyping() {
     const typing = document.getElementById('typing-indicator');
     if (typing) typing.remove();
+}
+
+function addWelcomeMessage() {
+    addAssistantMessage("Hi, I'm MedisinACSHS and I'm here to help with medical, technical, or emotional support. What can I do for you?");
+}
+
+function resetConversation() {
+    conversationHistory.length = 0;
+    hideTyping();
+    chatShell.innerHTML = '';
+    addWelcomeMessage();
+    chatInput.disabled = false;
+    sendBtn.disabled = false;
+    chatInput.focus();
 }
 
 async function sendToAssistant(userText) {
@@ -201,6 +203,8 @@ chatForm.addEventListener('submit', (event) => {
     event.preventDefault();
     handleSend(chatInput.value);
 });
+
+refreshBtn.addEventListener('click', resetConversation);
 </script>
 </body>
 </html>
