@@ -81,10 +81,20 @@
 </main>
 
 <script>
+const CHAT_API_URL = '/api/chat';
+
+const SYSTEM_CONTEXT =
+    `You are MedisinACSHS, a helpful AI medical assistant for the ACSHS.
+Keep responses clear, concise, and compassionate.
+If the user sends a greeting like hello, hi, or hey, reply with: Hello, how can I help you?`;
+
 // ── DOM refs ─────────────────────────────────────────────────────
 const chatForm   = document.querySelector('.chat-input');
 const chatInput  = document.getElementById('assistant-message');
 const chatShell  = document.querySelector('.chat-shell');
+const sendBtn    = document.querySelector('.send-btn');
+
+const conversationHistory = [];
 
 // ── Helpers ──────────────────────────────────────────────────────
 function getTime() {
@@ -115,34 +125,52 @@ function addAssistantMessage(text) {
     chatShell.scrollTop = chatShell.scrollHeight;
 }
 
-function getSimpleReply(userText) {
-    const text = userText.trim().toLowerCase();
+async function sendToAssistant(userText) {
+    conversationHistory.push({ role: 'user', parts: [{ text: userText }] });
 
-    if (/^(hello|hi|hey)\b/.test(text)) {
-        return 'Hello, how can I help you?';
+    const response = await fetch(CHAT_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            system_instruction: { parts: [{ text: SYSTEM_CONTEXT }] },
+            contents: conversationHistory
+        })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        const detail = data?.error || data?.detail || `Server error ${response.status}`;
+        throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
     }
 
-    return 'Thank you for your message. How can I help you?';
+    const replyText = data.reply || 'Sorry, I could not generate a response. Please try again.';
+    conversationHistory.push({ role: 'model', parts: [{ text: replyText }] });
+    return replyText;
 }
 
 // ── Send handler ─────────────────────────────────────────────────
-function handleSend(text) {
+async function handleSend(text) {
     const msg = text.trim();
     if (!msg) return;
 
     chatInput.value = '';
     chatInput.disabled = true;
-    document.querySelector('.send-btn').disabled = true;
+    sendBtn.disabled = true;
 
     addUserMessage(msg);
 
-    setTimeout(() => {
-        const reply = getSimpleReply(msg);
+    try {
+        const reply = await sendToAssistant(msg);
         addAssistantMessage(reply);
+    } catch (err) {
+        addAssistantMessage(`Sorry, something went wrong: ${err.message}`);
+        console.error(err);
+    } finally {
         chatInput.disabled = false;
-        document.querySelector('.send-btn').disabled = false;
+        sendBtn.disabled = false;
         chatInput.focus();
-    }, 250);
+    }
 }
 
 // ── Events ───────────────────────────────────────────────────────
