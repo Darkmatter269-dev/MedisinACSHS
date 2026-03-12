@@ -129,7 +129,9 @@ body {
 }
 
 .medalendar-panel h2 {
-    margin-bottom: 156px;
+    margin-top: 20px;
+    margin-bottom: 136px;
+    padding-left: 22px;
     line-height: 1;
     letter-spacing: 1.2px;
 }
