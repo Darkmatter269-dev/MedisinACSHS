@@ -107,6 +107,15 @@ body {
     animation-delay: 0.24s;
 }
 
+.medalendar-panel h2 {
+    line-height: 1;
+    letter-spacing: 1.2px;
+}
+
+.medalendar-panel .icon-button {
+    margin-top: 22px;
+}
+
 @keyframes slideInUp {
     from {
         transform: translateY(120px);
