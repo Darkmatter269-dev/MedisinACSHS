@@ -119,6 +119,7 @@ let isListening = false;
 let isAwaitingResponse = false;
 let autoSpeakReplies = synthesisSupported;
 let availableVoices = [];
+let recognitionStartTimer;
 
 // ── Helpers ──────────────────────────────────────────────────────
 function getTime() {
@@ -188,7 +189,7 @@ function speakReply(text) {
         utterance.lang = preferredVoice.lang;
     }
 
-    utterance.rate = 1.18;
+    utterance.rate = 1.32;
     utterance.pitch = 1;
     window.speechSynthesis.speak(utterance);
 }
@@ -263,17 +264,58 @@ function stopListening() {
     }
 }
 
-function startListening() {
+async function ensureMicrophonePermission() {
+    const mediaDevices = navigator.mediaDevices;
+
+    if (!mediaDevices || typeof mediaDevices.getUserMedia !== 'function') {
+        return true;
+    }
+
+    try {
+        const stream = await mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+        return true;
+    } catch (error) {
+        setVoiceStatus('Microphone permission is blocked. Allow microphone access in your browser settings.', 'is-error');
+        addAssistantMessage('I cannot access your microphone yet. Please allow microphone permission, then tap Speak again.');
+        return false;
+    }
+}
+
+function scheduleRecognitionStartGuard() {
+    clearTimeout(recognitionStartTimer);
+    recognitionStartTimer = setTimeout(() => {
+        if (isListening) {
+            return;
+        }
+
+        setVoiceStatus('Microphone did not start. Try Chrome or Edge, then allow mic permission and try again.', 'is-error');
+    }, 2200);
+}
+
+async function startListening() {
     if (!recognitionSupported || !recognition) {
+        return;
+    }
+
+    if (isAwaitingResponse) {
+        setVoiceStatus('Please wait for the assistant reply before speaking.');
+        return;
+    }
+
+    const hasMicPermission = await ensureMicrophonePermission();
+    if (!hasMicPermission) {
         return;
     }
 
     stopSpeaking();
     setVoiceStatus('Starting microphone...');
+    scheduleRecognitionStartGuard();
 
     try {
         recognition.start();
     } catch (error) {
+        clearTimeout(recognitionStartTimer);
         const message = error?.message || '';
 
         if (/already started/i.test(message)) {
@@ -292,7 +334,7 @@ function toggleListening() {
         return;
     }
 
-    startListening();
+    void startListening();
 }
 
 function initSpeechRecognition() {
@@ -308,11 +350,13 @@ function initSpeechRecognition() {
     recognition.maxAlternatives = 1;
 
     recognition.addEventListener('start', () => {
+        clearTimeout(recognitionStartTimer);
         isListening = true;
         updateVoiceInputButton();
     });
 
     recognition.addEventListener('end', () => {
+        clearTimeout(recognitionStartTimer);
         isListening = false;
         updateVoiceInputButton();
     });
