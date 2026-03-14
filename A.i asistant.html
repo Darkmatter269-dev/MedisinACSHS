@@ -337,6 +337,12 @@ function toggleListening() {
     void startListening();
 }
 
+function shutdownVoiceFeatures() {
+    clearTimeout(recognitionStartTimer);
+    stopListening();
+    stopSpeaking();
+}
+
 function initSpeechRecognition() {
     if (!recognitionSupported || !isSecureVoiceContext) {
         updateVoiceInputButton();
@@ -533,6 +539,10 @@ refreshBtn.addEventListener('click', resetConversation);
 
 voiceInputBtn.addEventListener('click', toggleListening);
 
+document.querySelectorAll('a[href="home.html"]').forEach((link) => {
+    link.addEventListener('click', shutdownVoiceFeatures);
+});
+
 voicePlaybackBtn.addEventListener('click', () => {
     autoSpeakReplies = !autoSpeakReplies;
     if (!autoSpeakReplies) {
@@ -548,6 +558,9 @@ if (synthesisSupported) {
 
 initSpeechRecognition();
 updateVoicePlaybackButton();
+
+window.addEventListener('beforeunload', shutdownVoiceFeatures);
+window.addEventListener('pagehide', shutdownVoiceFeatures);
 </script>
 </body>
 </html>
