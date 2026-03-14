@@ -37,6 +37,13 @@
             </div>
 
             <div class="assistant-actions" aria-label="Conversation controls">
+                <button class="header-btn" id="toggle-voice-playback" type="button" title="Turn voice replies off" aria-label="Turn voice replies off" aria-pressed="true">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M11 5 6 9H3v6h3l5 4z"></path>
+                        <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+                        <path d="M18.5 5.5a9 9 0 0 1 0 13"></path>
+                    </svg>
+                </button>
                 <button class="header-btn" id="refresh-chat" type="button" title="Refresh conversation" aria-label="Refresh conversation">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
@@ -63,7 +70,18 @@
         <form class="chat-input" aria-label="Send a message">
             <label class="sr-only" for="assistant-message">Type your message</label>
             <input id="assistant-message" type="text" placeholder="Type your message here...">
-            <button class="send-btn" type="submit">Send</button>
+            <div class="input-actions">
+                <button class="voice-btn" id="voice-input-btn" type="button" aria-label="Speak to the assistant" title="Speak to the assistant">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3z"></path>
+                        <path d="M19 11a7 7 0 0 1-14 0"></path>
+                        <path d="M12 18v3"></path>
+                        <path d="M8 21h8"></path>
+                    </svg>
+                    <span>Speak</span>
+                </button>
+                <button class="send-btn" type="submit">Send</button>
+            </div>
         </form>
 
         <p class="footer-note">Powered by MedisinACSHS AI - For informational purposes only</p>
@@ -84,12 +102,208 @@ const chatInput  = document.getElementById('assistant-message');
 const chatShell  = document.querySelector('.chat-shell');
 const sendBtn    = document.querySelector('.send-btn');
 const refreshBtn = document.getElementById('refresh-chat');
+const voiceInputBtn = document.getElementById('voice-input-btn');
+const voicePlaybackBtn = document.getElementById('toggle-voice-playback');
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognitionSupported = typeof SpeechRecognition === 'function';
+const synthesisSupported = 'speechSynthesis' in window;
 
 const conversationHistory = [];
+let recognition;
+let isListening = false;
+let isAwaitingResponse = false;
+let autoSpeakReplies = synthesisSupported;
+let availableVoices = [];
 
 // ── Helpers ──────────────────────────────────────────────────────
 function getTime() {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function stripReplyForSpeech(text) {
+    return text
+        .replace(/```[\s\S]*?```/g, ' ')
+        .replace(/[`*_#>-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function loadVoices() {
+    if (!synthesisSupported) {
+        return;
+    }
+
+    availableVoices = window.speechSynthesis.getVoices();
+}
+
+function getPreferredVoice() {
+    if (!availableVoices.length) {
+        loadVoices();
+    }
+
+    return (
+        availableVoices.find((voice) => voice.lang?.toLowerCase().startsWith('en')) ||
+        availableVoices[0] ||
+        null
+    );
+}
+
+function stopSpeaking() {
+    if (synthesisSupported) {
+        window.speechSynthesis.cancel();
+    }
+}
+
+function speakReply(text) {
+    if (!autoSpeakReplies || !synthesisSupported) {
+        return;
+    }
+
+    const spokenText = stripReplyForSpeech(text);
+    if (!spokenText) {
+        return;
+    }
+
+    stopSpeaking();
+
+    const utterance = new SpeechSynthesisUtterance(spokenText);
+    const preferredVoice = getPreferredVoice();
+
+    if (preferredVoice) {
+        utterance.voice = preferredVoice;
+        utterance.lang = preferredVoice.lang;
+    }
+
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    window.speechSynthesis.speak(utterance);
+}
+
+function updateVoicePlaybackButton() {
+    if (!voicePlaybackBtn) {
+        return;
+    }
+
+    if (!synthesisSupported) {
+        voicePlaybackBtn.disabled = true;
+        voicePlaybackBtn.title = 'Voice replies are not supported in this browser';
+        voicePlaybackBtn.setAttribute('aria-label', 'Voice replies are not supported in this browser');
+        voicePlaybackBtn.setAttribute('aria-pressed', 'false');
+        return;
+    }
+
+    const title = autoSpeakReplies ? 'Turn voice replies off' : 'Turn voice replies on';
+    voicePlaybackBtn.disabled = false;
+    voicePlaybackBtn.title = title;
+    voicePlaybackBtn.setAttribute('aria-label', title);
+    voicePlaybackBtn.setAttribute('aria-pressed', String(autoSpeakReplies));
+    voicePlaybackBtn.classList.toggle('is-muted', !autoSpeakReplies);
+}
+
+function updateVoiceInputButton() {
+    if (!voiceInputBtn) {
+        return;
+    }
+
+    if (!recognitionSupported) {
+        voiceInputBtn.disabled = true;
+        voiceInputBtn.title = 'Voice input works best in Chrome or Edge';
+        voiceInputBtn.setAttribute('aria-label', 'Voice input is not supported in this browser');
+        voiceInputBtn.classList.remove('is-listening');
+        voiceInputBtn.querySelector('span').textContent = 'No Mic';
+        return;
+    }
+
+    voiceInputBtn.disabled = isAwaitingResponse;
+    voiceInputBtn.classList.toggle('is-listening', isListening);
+    voiceInputBtn.querySelector('span').textContent = isListening ? 'Listening' : 'Speak';
+    const label = isAwaitingResponse
+        ? 'Please wait for the current reply to finish'
+        : (isListening ? 'Stop listening' : 'Speak to the assistant');
+    voiceInputBtn.title = label;
+    voiceInputBtn.setAttribute('aria-label', label);
+}
+
+function stopListening() {
+    if (recognition && isListening) {
+        recognition.stop();
+    }
+}
+
+function startListening() {
+    if (!recognitionSupported || !recognition) {
+        return;
+    }
+
+    stopSpeaking();
+    recognition.start();
+}
+
+function toggleListening() {
+    if (isListening) {
+        stopListening();
+        return;
+    }
+
+    startListening();
+}
+
+function initSpeechRecognition() {
+    if (!recognitionSupported) {
+        updateVoiceInputButton();
+        return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.addEventListener('start', () => {
+        isListening = true;
+        updateVoiceInputButton();
+    });
+
+    recognition.addEventListener('end', () => {
+        isListening = false;
+        updateVoiceInputButton();
+    });
+
+    recognition.addEventListener('result', (event) => {
+        const transcript = Array.from(event.results)
+            .map((result) => result[0]?.transcript || '')
+            .join(' ')
+            .trim();
+
+        if (!transcript) {
+            return;
+        }
+
+        chatInput.value = transcript;
+        handleSend(transcript);
+    });
+
+    recognition.addEventListener('error', (event) => {
+        if (event.error === 'aborted') {
+            return;
+        }
+
+        if (event.error === 'not-allowed') {
+            addAssistantMessage('Microphone access was blocked. Please allow microphone permission and try again.');
+            return;
+        }
+
+        if (event.error === 'no-speech') {
+            addAssistantMessage('I did not hear anything. Tap Speak and try again.');
+            return;
+        }
+
+        addAssistantMessage('Voice input is unavailable right now. Please type your message instead.');
+    });
+
+    updateVoiceInputButton();
 }
 
 function addUserMessage(text) {
@@ -142,6 +356,8 @@ function addWelcomeMessage() {
 
 function resetConversation() {
     conversationHistory.length = 0;
+    stopListening();
+    stopSpeaking();
     hideTyping();
     chatShell.innerHTML = '';
     addWelcomeMessage();
@@ -179,9 +395,11 @@ async function handleSend(text) {
     const msg = text.trim();
     if (!msg) return;
 
+    isAwaitingResponse = true;
     chatInput.value = '';
     chatInput.disabled = true;
     sendBtn.disabled = true;
+    updateVoiceInputButton();
 
     addUserMessage(msg);
     showTyping();
@@ -190,13 +408,16 @@ async function handleSend(text) {
         const reply = await sendToAssistant(msg);
         hideTyping();
         addAssistantMessage(reply);
+        speakReply(reply);
     } catch (err) {
         hideTyping();
         addAssistantMessage(`Sorry, something went wrong: ${err.message}`);
         console.error(err);
     } finally {
+        isAwaitingResponse = false;
         chatInput.disabled = false;
         sendBtn.disabled = false;
+        updateVoiceInputButton();
         chatInput.focus();
     }
 }
@@ -208,6 +429,24 @@ chatForm.addEventListener('submit', (event) => {
 });
 
 refreshBtn.addEventListener('click', resetConversation);
+
+voiceInputBtn.addEventListener('click', toggleListening);
+
+voicePlaybackBtn.addEventListener('click', () => {
+    autoSpeakReplies = !autoSpeakReplies;
+    if (!autoSpeakReplies) {
+        stopSpeaking();
+    }
+    updateVoicePlaybackButton();
+});
+
+if (synthesisSupported) {
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+initSpeechRecognition();
+updateVoicePlaybackButton();
 </script>
 </body>
 </html>

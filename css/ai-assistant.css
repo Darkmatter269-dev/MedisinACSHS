@@ -166,6 +166,10 @@ h1 {
     background: rgba(255, 255, 255, 0.16);
 }
 
+.header-btn.is-muted {
+    opacity: 0.62;
+}
+
 .chat-shell {
     background: var(--canvas);
     padding: 26px;
@@ -227,6 +231,12 @@ h1 {
     padding: 16px 24px 8px;
 }
 
+.input-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .chat-input input {
     width: 100%;
     border: 1px solid #bcd4ee;
@@ -252,6 +262,44 @@ h1 {
     font: inherit;
     font-weight: 700;
     cursor: pointer;
+}
+
+.voice-btn {
+    border: 1px solid #bcd4ee;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--text-main);
+    padding: 11px 16px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.voice-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.voice-btn:hover,
+.voice-btn:focus-visible {
+    border-color: #79afe8;
+    box-shadow: 0 0 0 3px rgba(63, 139, 228, 0.16);
+}
+
+.voice-btn.is-listening {
+    color: #fff;
+    border-color: #1e65de;
+    background: linear-gradient(90deg, #1d63dc 0%, #18b8ba 100%);
+    box-shadow: 0 10px 22px rgba(34, 98, 214, 0.22);
 }
 
 .footer-note {
@@ -314,7 +362,9 @@ h1 {
 
 /* Disable state while waiting for a reply */
 .chat-input input:disabled,
-.send-btn:disabled {
+.send-btn:disabled,
+.voice-btn:disabled,
+.header-btn:disabled {
     opacity: 0.55;
     cursor: not-allowed;
 }
@@ -355,7 +405,20 @@ h1 {
         padding: 14px;
     }
 
+    .input-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .voice-btn span {
+        display: none;
+    }
+
     .send-btn {
         padding: 10px 16px;
+    }
+
+    .voice-btn {
+        padding: 10px 12px;
     }
 }
