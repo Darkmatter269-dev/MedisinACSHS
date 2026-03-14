@@ -84,6 +84,8 @@
             </div>
         </form>
 
+        <p class="voice-status" id="voice-status" aria-live="polite"></p>
+
         <p class="footer-note">Powered by MedisinACSHS AI - For informational purposes only</p>
     </div>
 </main>
@@ -104,10 +106,12 @@ const sendBtn    = document.querySelector('.send-btn');
 const refreshBtn = document.getElementById('refresh-chat');
 const voiceInputBtn = document.getElementById('voice-input-btn');
 const voicePlaybackBtn = document.getElementById('toggle-voice-playback');
+const voiceStatus = document.getElementById('voice-status');
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 const recognitionSupported = typeof SpeechRecognition === 'function';
 const synthesisSupported = 'speechSynthesis' in window;
+const isSecureVoiceContext = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 
 const conversationHistory = [];
 let recognition;
@@ -119,6 +123,15 @@ let availableVoices = [];
 // ── Helpers ──────────────────────────────────────────────────────
 function getTime() {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function setVoiceStatus(message, tone = '') {
+    if (!voiceStatus) {
+        return;
+    }
+
+    voiceStatus.textContent = message;
+    voiceStatus.className = tone ? `voice-status ${tone}` : 'voice-status';
 }
 
 function stripReplyForSpeech(text) {
@@ -175,7 +188,7 @@ function speakReply(text) {
         utterance.lang = preferredVoice.lang;
     }
 
-    utterance.rate = 1;
+    utterance.rate = 1.18;
     utterance.pitch = 1;
     window.speechSynthesis.speak(utterance);
 }
@@ -212,6 +225,17 @@ function updateVoiceInputButton() {
         voiceInputBtn.setAttribute('aria-label', 'Voice input is not supported in this browser');
         voiceInputBtn.classList.remove('is-listening');
         voiceInputBtn.querySelector('span').textContent = 'No Mic';
+        setVoiceStatus('Voice input is unavailable here. Use Chrome or Edge for microphone support.', 'is-error');
+        return;
+    }
+
+    if (!isSecureVoiceContext) {
+        voiceInputBtn.disabled = true;
+        voiceInputBtn.title = 'Open this page through HTTPS or localhost to use the microphone';
+        voiceInputBtn.setAttribute('aria-label', 'Open this page through HTTPS or localhost to use the microphone');
+        voiceInputBtn.classList.remove('is-listening');
+        voiceInputBtn.querySelector('span').textContent = 'No Mic';
+        setVoiceStatus('Microphone input needs HTTPS or localhost. If you opened the HTML file directly, run it from localhost or your deployed site.', 'is-error');
         return;
     }
 
@@ -223,6 +247,14 @@ function updateVoiceInputButton() {
         : (isListening ? 'Stop listening' : 'Speak to the assistant');
     voiceInputBtn.title = label;
     voiceInputBtn.setAttribute('aria-label', label);
+
+    if (isAwaitingResponse) {
+        setVoiceStatus('Waiting for the assistant reply before starting the microphone.');
+    } else if (isListening) {
+        setVoiceStatus('Listening now. Speak clearly, then pause.');
+    } else {
+        setVoiceStatus('Tap Speak to talk to the assistant.');
+    }
 }
 
 function stopListening() {
@@ -237,7 +269,21 @@ function startListening() {
     }
 
     stopSpeaking();
-    recognition.start();
+    setVoiceStatus('Starting microphone...');
+
+    try {
+        recognition.start();
+    } catch (error) {
+        const message = error?.message || '';
+
+        if (/already started/i.test(message)) {
+            setVoiceStatus('Microphone is already listening. Speak now.');
+            return;
+        }
+
+        setVoiceStatus('Could not start the microphone. Try Chrome or Edge and allow microphone permission.', 'is-error');
+        console.error(error);
+    }
 }
 
 function toggleListening() {
@@ -250,7 +296,7 @@ function toggleListening() {
 }
 
 function initSpeechRecognition() {
-    if (!recognitionSupported) {
+    if (!recognitionSupported || !isSecureVoiceContext) {
         updateVoiceInputButton();
         return;
     }
@@ -282,24 +328,35 @@ function initSpeechRecognition() {
         }
 
         chatInput.value = transcript;
+        setVoiceStatus(`Heard: ${transcript}`);
         handleSend(transcript);
     });
 
     recognition.addEventListener('error', (event) => {
         if (event.error === 'aborted') {
+            setVoiceStatus('Microphone stopped. Tap Speak to try again.');
             return;
         }
 
         if (event.error === 'not-allowed') {
+            setVoiceStatus('Microphone access was blocked. Allow microphone permission and try again.', 'is-error');
             addAssistantMessage('Microphone access was blocked. Please allow microphone permission and try again.');
             return;
         }
 
         if (event.error === 'no-speech') {
+            setVoiceStatus('No speech detected. Try again and speak closer to the microphone.', 'is-error');
             addAssistantMessage('I did not hear anything. Tap Speak and try again.');
             return;
         }
 
+        if (event.error === 'network' || event.error === 'service-not-allowed') {
+            setVoiceStatus('Voice input failed to start. This usually means the browser or page context does not allow speech recognition.', 'is-error');
+            addAssistantMessage('Voice input is blocked in this browser or page. Try Chrome or Edge on localhost or HTTPS.');
+            return;
+        }
+
+        setVoiceStatus('Voice input is unavailable right now. Please type your message instead.', 'is-error');
         addAssistantMessage('Voice input is unavailable right now. Please type your message instead.');
     });
 

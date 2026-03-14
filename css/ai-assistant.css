@@ -311,6 +311,19 @@ h1 {
     font-size: 0.9rem;
 }
 
+.voice-status {
+    margin: 0;
+    padding: 0 24px 10px;
+    min-height: 1.2em;
+    color: #5f7692;
+    background: #f8fbff;
+    font-size: 0.9rem;
+}
+
+.voice-status.is-error {
+    color: #a33b3b;
+}
+
 .sr-only {
     position: absolute;
     width: 1px;
@@ -420,5 +433,9 @@ h1 {
 
     .voice-btn {
         padding: 10px 12px;
+    }
+
+    .voice-status {
+        padding: 0 14px 10px;
     }
 }
